@@ -49,6 +49,8 @@
 package com.alibaba.com.caucho.hessian.io;
 
 import com.alibaba.com.caucho.hessian.io.java8.*;
+import com.alibaba.com.caucho.hessian.io.spring.PageableDeserializer;
+import org.springframework.data.domain.PageRequest;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -167,7 +169,14 @@ public class SerializerFactory extends AbstractSerializerFactory {
         } catch (Throwable e) {
         }
 
-//增加对jdk1.8新增时间类型的支持
+        // pageable
+        try {
+            _staticDeserializerMap.put(PageRequest.class, new PageableDeserializer());
+        }catch (Throwable t) {
+            log.warning(String.valueOf(t.getCause()));
+        }
+
+        //增加对jdk1.8新增时间类型的支持
         try {
             if (isJava8()) {
                 _staticSerializerMap.put(java.time.LocalTime.class, Java8TimeSerializer.create(LocalTimeHandle.class));
