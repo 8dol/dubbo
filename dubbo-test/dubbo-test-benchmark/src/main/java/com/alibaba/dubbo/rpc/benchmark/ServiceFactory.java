@@ -6,7 +6,7 @@ import com.alibaba.dubbo.config.ApplicationConfig;
 import com.alibaba.dubbo.config.ReferenceConfig;
 
 /**
- * Abstract Service Factory,create custom nums Service
+ * Abstract DubboService Factory,create custom nums DubboService
  * 
  * @author tony.chenl
  */

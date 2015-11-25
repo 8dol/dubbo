@@ -22,15 +22,15 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Service
+ * DubboReference
  * 
  * @author william.liangf
  * @export
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
-public @interface Service {
+@Target({ElementType.FIELD, ElementType.METHOD})
+public @interface DubboReference {
 
     Class<?> interfaceClass() default void.class;
 
@@ -40,35 +40,31 @@ public @interface Service {
 
     String group() default "";
 
-    String path() default "";
+    String url() default "";
 
-    boolean export() default false;
+    String client() default "";
 
-    String token() default "";
+    boolean generic() default false;
 
-    boolean deprecated() default false;
+    boolean injvm() default false;
 
-    boolean dynamic() default false;
+    boolean check() default false;
 
-    String accesslog() default "";
+    boolean init() default false;
 
-    int executes() default 0;
+    boolean lazy() default false;
 
-    boolean register() default false;
+    boolean stubevent() default false;
 
-    int weight() default 0;
+    String reconnect() default "";
 
-    String document() default "";
+    boolean sticky() default false;
 
-    int delay() default 0;
-
-    String local() default "";
+    String proxy() default "";
 
     String stub() default "";
 
     String cluster() default "";
-
-    String proxy() default "";
 
     int connections() default 0;
 
@@ -110,9 +106,7 @@ public @interface Service {
 
     String module() default "";
 
-    String provider() default "";
-
-    String[] protocol() default {};
+    String consumer() default "";
 
     String monitor() default "";
 

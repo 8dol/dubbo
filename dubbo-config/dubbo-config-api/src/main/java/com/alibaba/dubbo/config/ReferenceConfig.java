@@ -36,7 +36,7 @@ import com.alibaba.dubbo.common.utils.ConfigUtils;
 import com.alibaba.dubbo.common.utils.NetUtils;
 import com.alibaba.dubbo.common.utils.ReflectUtils;
 import com.alibaba.dubbo.common.utils.StringUtils;
-import com.alibaba.dubbo.config.annotation.Reference;
+import com.alibaba.dubbo.config.annotation.DubboReference;
 import com.alibaba.dubbo.config.support.Parameter;
 import com.alibaba.dubbo.rpc.Invoker;
 import com.alibaba.dubbo.rpc.Protocol;
@@ -118,8 +118,8 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 
     public ReferenceConfig() {}
     
-    public ReferenceConfig(Reference reference) {
-        appendAnnotation(Reference.class, reference);
+    public ReferenceConfig(DubboReference reference) {
+        appendAnnotation(DubboReference.class, reference);
     }
 
     public URL toUrl() {

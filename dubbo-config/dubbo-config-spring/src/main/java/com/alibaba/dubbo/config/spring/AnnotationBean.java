@@ -24,6 +24,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.alibaba.dubbo.config.annotation.DubboReference;
+import com.alibaba.dubbo.config.annotation.DubboService;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
@@ -48,8 +50,6 @@ import com.alibaba.dubbo.config.ProviderConfig;
 import com.alibaba.dubbo.config.ReferenceConfig;
 import com.alibaba.dubbo.config.RegistryConfig;
 import com.alibaba.dubbo.config.ServiceConfig;
-import com.alibaba.dubbo.config.annotation.Reference;
-import com.alibaba.dubbo.config.annotation.Service;
 
 /**
  * AnnotationBean
@@ -99,7 +99,7 @@ public class AnnotationBean extends AbstractConfig implements DisposableBean, Be
                 Object scanner = scannerClass.getConstructor(new Class<?>[] {BeanDefinitionRegistry.class, boolean.class}).newInstance(new Object[] {(BeanDefinitionRegistry) beanFactory, true});
                 // add filter
                 Class<?> filterClass = ReflectUtils.forName("org.springframework.core.type.filter.AnnotationTypeFilter");
-                Object filter = filterClass.getConstructor(Class.class).newInstance(Service.class);
+                Object filter = filterClass.getConstructor(Class.class).newInstance(DubboService.class);
                 Method addIncludeFilter = scannerClass.getMethod("addIncludeFilter", ReflectUtils.forName("org.springframework.core.type.filter.TypeFilter"));
                 addIncludeFilter.invoke(scanner, filter);
                 // scan packages
@@ -134,7 +134,7 @@ public class AnnotationBean extends AbstractConfig implements DisposableBean, Be
         if (! isMatchPackage(bean)) {
             return bean;
         }
-        Service service = bean.getClass().getAnnotation(Service.class);
+        DubboService service = bean.getClass().getAnnotation(DubboService.class);
         if (service != null) {
             ServiceBean<Object> serviceConfig = new ServiceBean<Object>(service);
             if (void.class.equals(service.interfaceClass())
@@ -142,7 +142,7 @@ public class AnnotationBean extends AbstractConfig implements DisposableBean, Be
                 if (bean.getClass().getInterfaces().length > 0) {
                     serviceConfig.setInterface(bean.getClass().getInterfaces()[0]);
                 } else {
-                    throw new IllegalStateException("Failed to export remote service class " + bean.getClass().getName() + ", cause: The @Service undefined interfaceClass or interfaceName, and the service class unimplemented any interfaces.");
+                    throw new IllegalStateException("Failed to export remote service class " + bean.getClass().getName() + ", cause: The @DubboService undefined interfaceClass or interfaceName, and the service class unimplemented any interfaces.");
                 }
             }
             if (applicationContext != null) {
@@ -210,7 +210,7 @@ public class AnnotationBean extends AbstractConfig implements DisposableBean, Be
                     && Modifier.isPublic(method.getModifiers())
                     && ! Modifier.isStatic(method.getModifiers())) {
                 try {
-                	Reference reference = method.getAnnotation(Reference.class);
+                	DubboReference reference = method.getAnnotation(DubboReference.class);
                 	if (reference != null) {
 	                	Object value = refer(reference, method.getParameterTypes()[0]);
 	                	if (value != null) {
@@ -228,7 +228,7 @@ public class AnnotationBean extends AbstractConfig implements DisposableBean, Be
                 if (! field.isAccessible()) {
                     field.setAccessible(true);
                 }
-                Reference reference = field.getAnnotation(Reference.class);
+                DubboReference reference = field.getAnnotation(DubboReference.class);
             	if (reference != null) {
 	                Object value = refer(reference, field.getType());
 	                if (value != null) {
@@ -242,7 +242,7 @@ public class AnnotationBean extends AbstractConfig implements DisposableBean, Be
         return bean;
     }
 
-    private Object refer(Reference reference, Class<?> referenceClass) { //method.getParameterTypes()[0]
+    private Object refer(DubboReference reference, Class<?> referenceClass) { //method.getParameterTypes()[0]
         String interfaceName;
         if (! "".equals(reference.interfaceName())) {
             interfaceName = reference.interfaceName();
@@ -251,7 +251,7 @@ public class AnnotationBean extends AbstractConfig implements DisposableBean, Be
         } else if (referenceClass.isInterface()) {
             interfaceName = referenceClass.getName();
         } else {
-            throw new IllegalStateException("The @Reference undefined interfaceClass or interfaceName, and the property type " + referenceClass.getName() + " is not a interface.");
+            throw new IllegalStateException("The @DubboReference undefined interfaceClass or interfaceName, and the property type " + referenceClass.getName() + " is not a interface.");
         }
         String key = reference.group() + "/" + interfaceName + ":" + reference.version();
         ReferenceBean<?> referenceConfig = referenceConfigs.get(key);
