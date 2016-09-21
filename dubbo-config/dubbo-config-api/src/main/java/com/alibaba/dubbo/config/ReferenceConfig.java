@@ -279,6 +279,11 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         appendParameters(map, application);
         appendParameters(map, module);
         appendParameters(map, consumer, Constants.DEFAULT_KEY);
+
+        if(Boolean.TRUE == application.getVersionControl() && !StringUtils.isEquals(this.getVersion(), "*") && map.containsKey("revision")){
+            this.setVersion(map.get("revision"));
+        }
+
         appendParameters(map, this);
         String prifix = StringUtils.getServiceKey(map);
         if (methods != null && methods.size() > 0) {

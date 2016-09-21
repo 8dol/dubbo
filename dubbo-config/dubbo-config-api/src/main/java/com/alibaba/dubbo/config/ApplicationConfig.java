@@ -67,6 +67,9 @@ public class ApplicationConfig extends AbstractConfig {
     // 是否为缺省
     private Boolean              isDefault;
 
+    // 是否开启版本控制
+    private Boolean              versionControl;
+
     public ApplicationConfig() {
     }
     
@@ -194,4 +197,12 @@ public class ApplicationConfig extends AbstractConfig {
         this.isDefault = isDefault;
     }
 
+
+    public Boolean getVersionControl() {
+        return versionControl;
+    }
+
+    public void setVersionControl(Boolean versionControl) {
+        this.versionControl = versionControl;
+    }
 }
