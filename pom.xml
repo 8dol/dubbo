@@ -531,4 +531,10 @@
 			<url>http://nexus.dev.8dol.com/nexus/content/groups/public</url>
 		</repository>
 	</repositories>
+	<distributionManagement>
+		<repository>
+			<id>thirdparty</id>
+			<url>http://nexus.dev.8dol.com/nexus/content/repositories/thirdparty/</url>
+		</repository>
+	</distributionManagement>
 </project>
