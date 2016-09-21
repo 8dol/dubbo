@@ -280,7 +280,10 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         appendParameters(map, module);
         appendParameters(map, consumer, Constants.DEFAULT_KEY);
 
-        if(Boolean.TRUE == application.getVersionControl() && !StringUtils.isEquals(this.getVersion(), "*") && map.containsKey("revision")){
+        if(StringUtils.isEquals(this.getVersion(), "*")){
+            this.setNullVersion();
+        }
+        else if(Boolean.TRUE == application.getVersionControl() && map.containsKey("revision")){
             this.setVersion(map.get("revision"));
         }
 

@@ -188,6 +188,10 @@ public abstract class AbstractReferenceConfig extends AbstractInterfaceConfig {
         this.version = version;
     }
 
+    public void setNullVersion(){
+        this.version = null;
+    }
+
     public String getGroup() {
         return group;
     }
