@@ -195,12 +195,15 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
             Object ret = result.getValue();
             if (ret == null) {
                 out.writeByte(RESPONSE_NULL_VALUE);
+                out.writeUTF(result.getAttachment("time-chain", ""));
             } else {
                 out.writeByte(RESPONSE_VALUE);
+                out.writeUTF(result.getAttachment("time-chain", ""));
                 out.writeObject(ret);
             }
         } else {
             out.writeByte(RESPONSE_WITH_EXCEPTION);
+            out.writeUTF(result.getAttachment("time-chain", ""));
             out.writeObject(th);
         }
     }

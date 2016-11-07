@@ -15,6 +15,8 @@
  */
 package com.alibaba.dubbo.rpc;
 
+import com.alibaba.dubbo.common.utils.StringUtils;
+
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -111,6 +113,26 @@ public class RpcResult implements Result, Serializable {
         if (map != null && map.size() > 0) {
             attachments.putAll(map);
         }
+    }
+
+    public String addTimeChain(String source, String timeChain){
+        String time = source+":"+System.currentTimeMillis();
+        timeChain = timeChain+","+time;
+        setAttachment("time-chain", timeChain);
+        return timeChain;
+    }
+
+    public String updateTimeChain(String source){
+        String timeChain = getAttachment("time-chain");
+        String time = source+":"+System.currentTimeMillis();
+        if(StringUtils.isEmpty(timeChain)){
+            timeChain = time;
+        }
+        else{
+            timeChain = timeChain+","+time;
+        }
+        setAttachment("time-chain", timeChain);
+        return timeChain;
     }
 
     public void setAttachment(String key, String value) {

@@ -36,6 +36,8 @@ import com.alibaba.dubbo.remoting.exchange.Response;
 import com.alibaba.dubbo.remoting.exchange.support.DefaultFuture;
 import com.alibaba.dubbo.remoting.telnet.codec.TelnetCodec;
 import com.alibaba.dubbo.remoting.transport.CodecSupport;
+import com.alibaba.dubbo.rpc.RpcInvocation;
+import com.alibaba.dubbo.rpc.RpcResult;
 
 /**
  * ExchangeCodec.
@@ -84,7 +86,23 @@ public class ExchangeCodec extends TelnetCodec {
         int readable = buffer.readableBytes();
         byte[] header = new byte[Math.min(readable, HEADER_LENGTH)];
         buffer.readBytes(header);
-        return decode(channel, buffer, readable, header);
+
+        Object object = decode(channel, buffer, readable, header);
+        if(object instanceof Request){
+            Object data = ((Request)object).getData();
+            if(data instanceof RpcInvocation){
+                RpcInvocation rpcInvocation = (RpcInvocation)data;
+                rpcInvocation.updateTimeChain("DeRq");
+            }
+        }
+        else if(object instanceof Response){
+            Object result = ((Response)object).getResult();
+            if(result instanceof RpcResult){
+                RpcResult rpcResult = (RpcResult)result;
+                rpcResult.updateTimeChain("DeRs");
+            }
+        }
+        return object;
     }
     
     protected Object decode(Channel channel, ChannelBuffer buffer, int readable, byte[] header) throws IOException {
@@ -230,9 +248,16 @@ public class ExchangeCodec extends TelnetCodec {
         buffer.writerIndex(savedWriteIndex + HEADER_LENGTH);
         ChannelBufferOutputStream bos = new ChannelBufferOutputStream(buffer);
         ObjectOutput out = serialization.serialize(channel.getUrl(), bos);
+
         if (req.isEvent()) {
             encodeEventData(channel, out, req.getData());
         } else {
+            Object data = req.getData();
+            if(data instanceof RpcInvocation){
+                RpcInvocation rpcInvocation = (RpcInvocation)data;
+                rpcInvocation.updateTimeChain("EnRq");
+            }
+
             encodeRequestData(channel, out, req.getData());
         }
         out.flushBuffer();
@@ -273,6 +298,11 @@ public class ExchangeCodec extends TelnetCodec {
                 if (res.isHeartbeat()) {
                     encodeHeartbeatData(channel, out, res.getResult());
                 } else {
+                    Object result = res.getResult();
+                    if(result instanceof RpcResult){
+                        RpcResult rpcResult = (RpcResult)result;
+                        rpcResult.updateTimeChain("EnRs");
+                    }
                     encodeResponseData(channel, out, res.getResult());
                 }
             }

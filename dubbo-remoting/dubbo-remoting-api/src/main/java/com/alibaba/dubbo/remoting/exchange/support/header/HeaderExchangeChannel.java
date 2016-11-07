@@ -30,6 +30,8 @@ import com.alibaba.dubbo.remoting.exchange.Request;
 import com.alibaba.dubbo.remoting.exchange.Response;
 import com.alibaba.dubbo.remoting.exchange.ResponseFuture;
 import com.alibaba.dubbo.remoting.exchange.support.DefaultFuture;
+import com.alibaba.dubbo.rpc.Invocation;
+import com.alibaba.dubbo.rpc.RpcInvocation;
 
 /**
  * ExchangeReceiver
@@ -108,6 +110,11 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         req.setTwoWay(true);
         req.setData(request);
         DefaultFuture future = new DefaultFuture(channel, req, timeout);
+
+        if(request instanceof RpcInvocation){
+            ((RpcInvocation)request).setAttachment("mId", String.valueOf(req.getId()));
+        }
+
         try{
             channel.send(req);
         }catch (RemotingException e) {

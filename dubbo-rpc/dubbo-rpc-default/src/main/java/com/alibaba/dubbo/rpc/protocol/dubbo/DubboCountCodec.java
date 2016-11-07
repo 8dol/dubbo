@@ -16,9 +16,9 @@
 
 package com.alibaba.dubbo.rpc.protocol.dubbo;
 
-import java.io.IOException;
-
 import com.alibaba.dubbo.common.Constants;
+import com.alibaba.dubbo.common.logger.Logger;
+import com.alibaba.dubbo.common.logger.LoggerFactory;
 import com.alibaba.dubbo.remoting.Channel;
 import com.alibaba.dubbo.remoting.Codec2;
 import com.alibaba.dubbo.remoting.buffer.ChannelBuffer;
@@ -28,21 +28,41 @@ import com.alibaba.dubbo.remoting.exchange.support.MultiMessage;
 import com.alibaba.dubbo.rpc.RpcInvocation;
 import com.alibaba.dubbo.rpc.RpcResult;
 
+import java.io.IOException;
+
 /**
  * @author <a href="mailto:gang.lvg@alibaba-inc.com">kimi</a>
  */
 public final class DubboCountCodec implements Codec2 {
+    private static final Logger logger = LoggerFactory.getLogger(DubboCountCodec.class);
 
     private DubboCodec codec = new DubboCodec();
 
     public void encode(Channel channel, ChannelBuffer buffer, Object msg) throws IOException {
+        long start = System.currentTimeMillis();
         codec.encode(channel, buffer, msg);
+
+        if (logger.isInfoEnabled()) {
+            if (msg instanceof Request) {
+                Request req = (Request) msg;
+
+                if (!req.isEvent()) {
+                    logger.info("[Codec:" + req.getId() + ":" + channel.getLocalAddress() + "]请求编码.耗时=" + (System.currentTimeMillis() - start));
+                }
+            } else if (msg instanceof Response) {
+                Response res = (Response) msg;
+                if (!res.isHeartbeat()) {
+                    logger.info("[Codec:" + res.getId() + ":" + channel.getRemoteAddress() + "]响应编码.耗时=" + (System.currentTimeMillis() - start));
+                }
+            }
+        }
     }
 
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
         int save = buffer.readerIndex();
         MultiMessage result = MultiMessage.create();
         do {
+            long start = System.currentTimeMillis();
             Object obj = codec.decode(channel, buffer);
             if (Codec2.DecodeResult.NEED_MORE_INPUT == obj) {
                 buffer.readerIndex(save);
@@ -50,6 +70,24 @@ public final class DubboCountCodec implements Codec2 {
             } else {
                 result.addMessage(obj);
                 logMessageLength(obj, buffer.readerIndex() - save);
+
+                if (logger.isInfoEnabled()) {
+                    if (obj instanceof Request) {
+                        Request req = (Request) obj;
+
+                        if (!req.isEvent()) {
+                            String inputSize = ((RpcInvocation) req.getData()).getAttachment(Constants.INPUT_KEY);
+
+                            logger.info("[Codec:" + req.getId() + ":" + channel.getRemoteAddress() + "]请求解码.耗时=" + (System.currentTimeMillis() - start) + ", 长度=" + inputSize);
+                        }
+                    } else if (obj instanceof Response) {
+                        Response res = (Response) obj;
+                        if (!res.isHeartbeat()) {
+                            String outputSize = ((RpcResult) res.getResult()).getAttachment(Constants.OUTPUT_KEY);
+                            logger.info("[Codec:" + res.getId() + ":" + channel.getLocalAddress() + "]响应解码.耗时=" + (System.currentTimeMillis() - start) + ", 长度=" + outputSize);
+                        }
+                    }
+                }
                 save = buffer.readerIndex();
             }
         } while (true);
@@ -63,18 +101,20 @@ public final class DubboCountCodec implements Codec2 {
     }
 
     private void logMessageLength(Object result, int bytes) {
-        if (bytes <= 0) { return; }
+        if (bytes <= 0) {
+            return;
+        }
         if (result instanceof Request) {
             try {
                 ((RpcInvocation) ((Request) result).getData()).setAttachment(
-                    Constants.INPUT_KEY, String.valueOf(bytes));
+                        Constants.INPUT_KEY, String.valueOf(bytes));
             } catch (Throwable e) {
                 /* ignore */
             }
         } else if (result instanceof Response) {
             try {
                 ((RpcResult) ((Response) result).getResult()).setAttachment(
-                    Constants.OUTPUT_KEY, String.valueOf(bytes));
+                        Constants.OUTPUT_KEY, String.valueOf(bytes));
             } catch (Throwable e) {
                 /* ignore */
             }

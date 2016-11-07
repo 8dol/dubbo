@@ -23,6 +23,7 @@ import java.util.Map;
 
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.URL;
+import com.alibaba.dubbo.common.utils.StringUtils;
 
 /**
  * RPC Invocation.
@@ -195,6 +196,20 @@ public class RpcInvocation implements Invocation, Serializable {
             return defaultValue;
         }
         return value;
+    }
+
+    public String updateTimeChain(String source){
+        String timeChain = getAttachment("time-chain");
+        String time = source+":"+System.currentTimeMillis();
+        if(StringUtils.isEmpty(timeChain)){
+            timeChain = time;
+        }
+        else{
+            timeChain = timeChain+","+time;
+        }
+        setAttachment("time-chain", timeChain);
+
+        return timeChain;
     }
 
     @Override

@@ -15,8 +15,6 @@
  */
 package com.alibaba.dubbo.remoting.exchange.support.header;
 
-import java.net.InetSocketAddress;
-
 import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.common.logger.Logger;
@@ -33,24 +31,28 @@ import com.alibaba.dubbo.remoting.exchange.Request;
 import com.alibaba.dubbo.remoting.exchange.Response;
 import com.alibaba.dubbo.remoting.exchange.support.DefaultFuture;
 import com.alibaba.dubbo.remoting.transport.ChannelHandlerDelegate;
+import com.alibaba.dubbo.rpc.RpcInvocation;
+import com.alibaba.dubbo.rpc.RpcResult;
+
+import java.net.InetSocketAddress;
 
 /**
  * ExchangeReceiver
- * 
+ *
  * @author william.liangf
  * @author chao.liuc
  */
 public class HeaderExchangeHandler implements ChannelHandlerDelegate {
 
-    protected static final Logger logger              = LoggerFactory.getLogger(HeaderExchangeHandler.class);
+    protected static final Logger logger = LoggerFactory.getLogger(HeaderExchangeHandler.class);
 
-    public static String          KEY_READ_TIMESTAMP  = HeartbeatHandler.KEY_READ_TIMESTAMP;
+    public static String KEY_READ_TIMESTAMP = HeartbeatHandler.KEY_READ_TIMESTAMP;
 
-    public static String          KEY_WRITE_TIMESTAMP = HeartbeatHandler.KEY_WRITE_TIMESTAMP;
+    public static String KEY_WRITE_TIMESTAMP = HeartbeatHandler.KEY_WRITE_TIMESTAMP;
 
     private final ExchangeHandler handler;
 
-    public HeaderExchangeHandler(ExchangeHandler handler){
+    public HeaderExchangeHandler(ExchangeHandler handler) {
         if (handler == null) {
             throw new IllegalArgumentException("handler == null");
         }
@@ -80,10 +82,19 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         // find handler by message class.
         Object msg = req.getData();
         try {
+            if (msg instanceof RpcInvocation) {
+                RpcInvocation rpcInvocation = (RpcInvocation) msg;
+                rpcInvocation.updateTimeChain("HdRq");
+            }
+
             // handle data.
             Object result = handler.reply(channel, msg);
             res.setStatus(Response.OK);
             res.setResult(result);
+
+            if (result instanceof RpcResult) {
+                ((RpcResult) result).updateTimeChain("HdRs");
+            }
         } catch (Throwable e) {
             res.setStatus(Response.SERVICE_ERROR);
             res.setErrorMessage(StringUtils.toString(e));
@@ -143,7 +154,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
                 throw (RemotingException) exception;
             } else {
                 throw new RemotingException(channel.getLocalAddress(), channel.getRemoteAddress(),
-                                            exception.getMessage(), exception);
+                        exception.getMessage(), exception);
             }
         }
     }
@@ -151,9 +162,9 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
     private static boolean isClientSide(Channel channel) {
         InetSocketAddress address = channel.getRemoteAddress();
         URL url = channel.getUrl();
-        return url.getPort() == address.getPort() && 
-                    NetUtils.filterLocalHost(url.getIp())
-                    .equals(NetUtils.filterLocalHost(address.getAddress().getHostAddress()));
+        return url.getPort() == address.getPort() &&
+                NetUtils.filterLocalHost(url.getIp())
+                        .equals(NetUtils.filterLocalHost(address.getAddress().getHostAddress()));
     }
 
     public void received(Channel channel, Object message) throws RemotingException {
@@ -199,7 +210,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
             Object msg = e.getRequest();
             if (msg instanceof Request) {
                 Request req = (Request) msg;
-                if (req.isTwoWay() && ! req.isHeartbeat()) {
+                if (req.isTwoWay() && !req.isHeartbeat()) {
                     Response res = new Response(req.getId(), req.getVersion());
                     res.setStatus(Response.SERVER_ERROR);
                     res.setErrorMessage(StringUtils.toString(e));
