@@ -76,12 +76,21 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
         byte flag = in.readByte();
         switch (flag) {
             case DubboCodec.RESPONSE_NULL_VALUE:
-                setAttachment("time-chain", in.readUTF());
+                if(invocation != null) {
+                    String interfaceName = invocation.getInvoker().getInterface().getName().intern();
+                    if ("com.alibaba.dubbo.monitor.MonitorService" != interfaceName) {
+                        try {
+                            setAttachment("time-chain", in.readUTF());
+                        } catch (Exception e) {
+                            System.out.println(interfaceName + "  " + e.toString());
+                        }
+                    }
+                }
                 break;
             case DubboCodec.RESPONSE_VALUE:
                 try {
-                    Type[] returnType = RpcUtils.getReturnTypes(invocation);
                     setAttachment("time-chain", in.readUTF());
+                    Type[] returnType = RpcUtils.getReturnTypes(invocation);
                     setValue(returnType == null || returnType.length == 0 ? in.readObject() :
                             (returnType.length == 1 ? in.readObject((Class<?>) returnType[0])
                                     : in.readObject((Class<?>) returnType[0], returnType[1])));

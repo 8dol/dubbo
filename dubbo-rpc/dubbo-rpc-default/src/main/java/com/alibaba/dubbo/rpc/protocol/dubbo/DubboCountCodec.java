@@ -42,17 +42,18 @@ public final class DubboCountCodec implements Codec2 {
         long start = System.currentTimeMillis();
         codec.encode(channel, buffer, msg);
 
-        if (logger.isInfoEnabled()) {
+        long cost = System.currentTimeMillis() -start;
+        if (logger.isInfoEnabled() && cost > 5) {
             if (msg instanceof Request) {
                 Request req = (Request) msg;
 
                 if (!req.isEvent()) {
-                    logger.info("[Codec:" + req.getId() + ":" + channel.getLocalAddress() + "]请求编码.耗时=" + (System.currentTimeMillis() - start));
+                    logger.info("[Codec:" + req.getId() + ":" + channel.getLocalAddress() + "]请求编码.耗时=" + cost);
                 }
             } else if (msg instanceof Response) {
                 Response res = (Response) msg;
                 if (!res.isHeartbeat()) {
-                    logger.info("[Codec:" + res.getId() + ":" + channel.getRemoteAddress() + "]响应编码.耗时=" + (System.currentTimeMillis() - start));
+                    logger.info("[Codec:" + res.getId() + ":" + channel.getRemoteAddress() + "]响应编码.耗时=" + cost);
                 }
             }
         }
@@ -71,20 +72,21 @@ public final class DubboCountCodec implements Codec2 {
                 result.addMessage(obj);
                 logMessageLength(obj, buffer.readerIndex() - save);
 
-                if (logger.isInfoEnabled()) {
+                long cost = System.currentTimeMillis() -start;
+                if (logger.isInfoEnabled() && cost > 5) {
                     if (obj instanceof Request) {
                         Request req = (Request) obj;
 
                         if (!req.isEvent()) {
                             String inputSize = ((RpcInvocation) req.getData()).getAttachment(Constants.INPUT_KEY);
 
-                            logger.info("[Codec:" + req.getId() + ":" + channel.getRemoteAddress() + "]请求解码.耗时=" + (System.currentTimeMillis() - start) + ", 长度=" + inputSize);
+                            logger.info("[Codec:" + req.getId() + ":" + channel.getRemoteAddress() + "]请求解码.耗时=" + cost + ", 长度=" + inputSize);
                         }
                     } else if (obj instanceof Response) {
                         Response res = (Response) obj;
                         if (!res.isHeartbeat()) {
                             String outputSize = ((RpcResult) res.getResult()).getAttachment(Constants.OUTPUT_KEY);
-                            logger.info("[Codec:" + res.getId() + ":" + channel.getLocalAddress() + "]响应解码.耗时=" + (System.currentTimeMillis() - start) + ", 长度=" + outputSize);
+                            logger.info("[Codec:" + res.getId() + ":" + channel.getLocalAddress() + "]响应解码.耗时=" + cost + ", 长度=" + outputSize);
                         }
                     }
                 }
