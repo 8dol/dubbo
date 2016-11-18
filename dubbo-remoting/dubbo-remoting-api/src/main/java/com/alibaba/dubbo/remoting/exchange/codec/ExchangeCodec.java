@@ -18,6 +18,7 @@ package com.alibaba.dubbo.remoting.exchange.codec;
 import java.io.IOException;
 import java.io.InputStream;
 
+import com.alibaba.dubbo.common.Constants;
 import com.alibaba.dubbo.common.io.Bytes;
 import com.alibaba.dubbo.common.io.StreamUtils;
 import com.alibaba.dubbo.common.logger.Logger;
@@ -157,6 +158,7 @@ public class ExchangeCodec extends TelnetCodec {
     }
 
     protected Object decodeBody(Channel channel, InputStream is, byte[] header) throws IOException {
+        long start = System.currentTimeMillis();
         byte flag = header[2], proto = (byte) (flag & SERIALIZATION_MASK);
         Serialization s = CodecSupport.getSerialization(channel.getUrl(), proto);
         ObjectInput in = s.deserialize(channel.getUrl(), is);
@@ -189,6 +191,11 @@ public class ExchangeCodec extends TelnetCodec {
             } else {
                 res.setErrorMessage(in.readUTF());
             }
+
+            long cost = System.currentTimeMillis() - start;
+            if (logger.isInfoEnabled() && cost > 5 && !res.isHeartbeat()){
+                logger.info("[ExchangeCodec:" + res.getId() + ":" + channel.getLocalAddress() + "]响应解码.耗时=" + cost);
+            }
             return res;
         } else {
             // decode request.
@@ -213,6 +220,10 @@ public class ExchangeCodec extends TelnetCodec {
                 req.setBroken(true);
                 req.setData(t);
             }
+            long cost = System.currentTimeMillis() - start;
+            if (logger.isInfoEnabled() && cost > 5 && !req.isEvent()){
+                logger.info("[ExchangeCodec:" + req.getId() + ":" + channel.getRemoteAddress() + "]请求解码.耗时=" + cost);
+            }
             return req;
         }
     }
@@ -228,6 +239,8 @@ public class ExchangeCodec extends TelnetCodec {
     }
 
     protected void encodeRequest(Channel channel, ChannelBuffer buffer, Request req) throws IOException {
+        long start = System.currentTimeMillis();
+
         Serialization serialization = getSerialization(channel);
         // header.
         byte[] header = new byte[HEADER_LENGTH];
@@ -243,11 +256,15 @@ public class ExchangeCodec extends TelnetCodec {
         // set request id.
         Bytes.long2bytes(req.getId(), header, 4);
 
+        long step1 = System.currentTimeMillis();
+
         // encode request data.
         int savedWriteIndex = buffer.writerIndex();
         buffer.writerIndex(savedWriteIndex + HEADER_LENGTH);
         ChannelBufferOutputStream bos = new ChannelBufferOutputStream(buffer);
         ObjectOutput out = serialization.serialize(channel.getUrl(), bos);
+
+        long step2 = System.currentTimeMillis();
 
         if (req.isEvent()) {
             encodeEventData(channel, out, req.getData());
@@ -260,6 +277,9 @@ public class ExchangeCodec extends TelnetCodec {
 
             encodeRequestData(channel, out, req.getData());
         }
+
+        long step3 = System.currentTimeMillis();
+
         out.flushBuffer();
         bos.flush();
         bos.close();
@@ -267,14 +287,28 @@ public class ExchangeCodec extends TelnetCodec {
         checkPayload(channel, len);
         Bytes.int2bytes(len, header, 12);
 
+        long step4 = System.currentTimeMillis();
+
         // write
         buffer.writerIndex(savedWriteIndex);
         buffer.writeBytes(header); // write header.
         buffer.writerIndex(savedWriteIndex + HEADER_LENGTH + len);
+
+
+        long step5 = System.currentTimeMillis();
+
+        long cost = step5 -start;
+        if (logger.isInfoEnabled() && cost > 5 && !req.isEvent() ) {
+            StringBuffer stringBuffer = new StringBuffer("[ExchangeCodec:").append(req.getId()).append(":").append(channel.getLocalAddress()).
+                    append("]请求编码.耗时=").append(cost).append(", step1=").append(step1-start).append(", step2=").append(step2-step1).
+                    append(",step3=").append(step3-step2).append(", step4=").append(step4-step3).append(", step5=").append(step5-step4);
+            logger.info(stringBuffer.toString());
+        }
     }
 
     protected void encodeResponse(Channel channel, ChannelBuffer buffer, Response res) throws IOException {
         try {
+            long start = System.currentTimeMillis();
             Serialization serialization = getSerialization(channel);
             // header.
             byte[] header = new byte[HEADER_LENGTH];
@@ -289,10 +323,15 @@ public class ExchangeCodec extends TelnetCodec {
             // set request id.
             Bytes.long2bytes(res.getId(), header, 4);
 
+            long step1 = System.currentTimeMillis();
+
             int savedWriteIndex = buffer.writerIndex();
             buffer.writerIndex(savedWriteIndex + HEADER_LENGTH);
             ChannelBufferOutputStream bos = new ChannelBufferOutputStream(buffer);
             ObjectOutput out = serialization.serialize(channel.getUrl(), bos);
+
+            long step2 = System.currentTimeMillis();
+
             // encode response data or error message.
             if (status == Response.OK) {
                 if (res.isHeartbeat()) {
@@ -307,9 +346,14 @@ public class ExchangeCodec extends TelnetCodec {
                 }
             }
             else out.writeUTF(res.getErrorMessage());
+
+            long step3 = System.currentTimeMillis();
+
             out.flushBuffer();
             bos.flush();
             bos.close();
+
+            long step4 = System.currentTimeMillis();
 
             int len = bos.writtenBytes();
             checkPayload(channel, len);
@@ -318,6 +362,16 @@ public class ExchangeCodec extends TelnetCodec {
             buffer.writerIndex(savedWriteIndex);
             buffer.writeBytes(header); // write header.
             buffer.writerIndex(savedWriteIndex + HEADER_LENGTH + len);
+
+            long step5 = System.currentTimeMillis();
+
+            long cost = step5 -start;
+            if (logger.isInfoEnabled()  && cost > 5 && !res.isHeartbeat()) {
+                StringBuffer stringBuffer = new StringBuffer("[ExchangeCodec:").append(res.getId()).append(":").append(channel.getLocalAddress()).
+                        append("]响应编码.耗时=").append(cost).append(", step1=").append(step1-start).append(", step2=").append(step2-step1).
+                        append(",step3=").append(step3-step2).append(", step4=").append(step4-step3).append(", step5=").append(step5-step4);
+                logger.info(stringBuffer.toString());
+            }
         } catch (Throwable t) {
             // 发送失败信息给Consumer，否则Consumer只能等超时了
             if (! res.isEvent() && res.getStatus() != Response.BAD_RESPONSE) {
